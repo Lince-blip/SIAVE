@@ -503,7 +503,42 @@ const logout = async () => {
     </div>
   );
 }
+const [subiendo, setSubiendo] = useState(false);
 
+const subirFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  try {
+    setSubiendo(true);
+    if (!e.target.files || e.target.files.length === 0) return;
+
+    const file = e.target.files[0];
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}.${fileExt}`;
+
+    // 1. Sube la foto al bucket público que creamos
+    const { error: uploadError } = await supabase.storage
+      .from('imagenes-vehiculos')
+      .upload(fileName, file);
+
+    if (uploadError) throw uploadError;
+
+    // 2. Obtiene la URL pública del archivo
+    const { data } = supabase.storage
+      .from('imagenes-vehiculos')
+      .getPublicUrl(fileName);
+
+    // 3. Guarda la URL en el estado de tu formulario actual
+    setForm((prev: any) => ({
+      ...prev,
+      foto_url: data.publicUrl
+    }));
+
+    alert('¡Fotografía cargada con éxito!');
+  } catch (error: any) {
+    alert('Error al subir imagen: ' + error.message);
+  } finally {
+    setSubiendo(false);
+  }
+};
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) {
@@ -540,6 +575,7 @@ const logout = async () => {
       palabras_clave: form.palabras_clave || null,
       estatus: form.estatus || null,
       vinculos: form.vinculos || null,
+      foto_url: form.foto_url || null,
     };
 
     if (editandoId) {
@@ -706,6 +742,31 @@ const logout = async () => {
               <textarea style={styles.textarea} name="palabras_clave" placeholder="Palabras clave" value={form.palabras_clave} onChange={handleChange} />
               <input style={styles.input} name="estatus" placeholder="Estatus" value={form.estatus} onChange={handleChange} />
               <textarea style={styles.textarea} name="vinculos" placeholder="Vínculos" value={form.vinculos} onChange={handleChange} />
+
+<div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px', marginBottom: '12px' }}>
+  <label style={{ fontSize: '14px', fontWeight: 'bold', color: '#374151' }}>
+    Fotografía del Vehículo
+  </label>
+  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+    <label style={{ cursor: 'pointer', backgroundColor: '#2563eb', color: '#ffffff', fontWeight: '500', padding: '8px 16px', borderRadius: '8px', fontSize: '14px', border: 'none' }}>
+      {subiendo ? 'Cargando...' : '📁 Seleccionar foto'}
+      <input 
+        type="file" 
+        accept="image/*" 
+        onChange={subirFoto} 
+        disabled={subiendo}
+        style={{ display: 'none' }} 
+      />
+    </label>
+
+    {form.foto_url && (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#16a34a', fontSize: '12px', fontWeight: '500' }}>
+        <span>✓ Foto cargada</span>
+        <img src={form.foto_url} style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #e5e7eb' }} />
+      </div>
+    )}
+  </div>
+</div>
 
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                 {rol === "admin" && (
